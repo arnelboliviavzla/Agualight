@@ -1,0 +1,1006 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0B5E8A">
+<title>Agua Rutas</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue-900:#062B45; --blue-800:#0B5E8A; --blue-600:#0A6CB8;
+  --aqua-500:#00B8D9; --aqua-300:#7FDBEE;
+  --mex-green:#006847; --mex-red:#CE1126;
+  --cream:#FAFAF7; --ink:#1A1A1A;
+  --gray-500:#6B6B6B; --gray-300:#D8D8D8; --gray-100:#F2F2F2;
+  --radius:10px;
+  --shadow:0 2px 8px rgba(6,43,69,.08);
+  --shadow-lg:0 8px 24px rgba(6,43,69,.16);
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--cream);color:var(--ink);overflow:hidden}
+body{display:flex;flex-direction:column}
+.hidden{display:none!important}
+.icon{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.icon.lg{width:28px;height:28px}
+.icon.sm{width:16px;height:16px}
+
+/* SPLASH */
+.splash{position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,#062B45 0%,#0B5E8A 55%,#00B8D9 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:16px;transition:opacity .5s,visibility .5s}
+.splash.fade{opacity:0;visibility:hidden}
+.splash::before{content:'';position:absolute;top:0;left:0;right:0;height:34px;background:linear-gradient(90deg,var(--mex-green),#fff,var(--mex-red));clip-path:polygon(0 0,100% 0,100% 40%,96% 100%,92% 40%,88% 100%,84% 40%,80% 100%,76% 40%,72% 100%,68% 40%,64% 100%,60% 40%,56% 100%,52% 40%,48% 100%,44% 40%,40% 100%,36% 40%,32% 100%,28% 40%,24% 100%,20% 40%,16% 100%,12% 40%,8% 100%,4% 40%,0 100%);opacity:.85}
+.splash-drop{width:96px;height:96px;animation:dropBounce 1.8s ease-in-out infinite;filter:drop-shadow(0 8px 24px rgba(0,184,217,.5))}
+@keyframes dropBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.05)}}
+.splash-ripple{position:absolute;width:180px;height:180px;border-radius:50%;border:2px solid rgba(255,255,255,.4);animation:ripple 2.4s ease-out infinite}
+.splash-ripple.delay{animation-delay:1.2s}
+@keyframes ripple{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.6);opacity:0}}
+.splash h1{font-size:26px;font-weight:700;letter-spacing:.5px}
+.splash p{font-size:13px;opacity:.85}
+.splash-loader{display:flex;gap:6px;margin-top:8px}
+.splash-loader span{width:8px;height:8px;border-radius:50%;background:#fff;animation:dotPulse 1.2s ease-in-out infinite}
+.splash-loader span:nth-child(2){animation-delay:.2s}
+.splash-loader span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+
+/* LOGIN */
+.login{position:fixed;inset:0;z-index:900;background:var(--cream);display:flex;flex-direction:column;padding:24px 20px;overflow-y:auto}
+.login-header{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:20px;margin-bottom:32px}
+.login-header svg{width:56px;height:56px}
+.login-header h1{font-size:22px;color:var(--blue-800);font-weight:700}
+.login-header p{font-size:12px;color:var(--gray-500)}
+.roles{display:flex;flex-direction:column;gap:14px}
+.role-card{background:#fff;border:1px solid var(--gray-300);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow);margin-bottom:10px}
+.role-card:active{transform:scale(.98)}
+.role-icon-wrap{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.role-icon-wrap.admin{background:linear-gradient(135deg,var(--blue-800),var(--blue-600))}
+.role-icon-wrap.driver{background:linear-gradient(135deg,var(--mex-green),#0E9F6E)}
+.role-text h2{font-size:15px;font-weight:600;margin-bottom:2px}
+.role-text p{font-size:12px;color:var(--gray-500)}
+.role-card .chevron{margin-left:auto;color:var(--gray-500)}
+.login-form{background:var(--cream);display:flex;flex-direction:column;gap:16px;max-width:420px;width:100%;margin:auto}
+.login-form .back-btn{background:none;border:none;color:var(--blue-600);padding:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;align-self:flex-start}
+.login-form .role-display{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 0}
+.login-form .role-display h2{font-size:18px;color:var(--blue-800)}
+.login-form .role-display p{font-size:13px;color:var(--gray-500)}
+.password-field{position:relative}
+.password-field input{width:100%;padding:14px 44px 14px 16px;border:1.5px solid var(--gray-300);border-radius:var(--radius);font-size:15px;background:#fff;transition:border-color .2s}
+.password-field input:focus{outline:none;border-color:var(--blue-600)}
+.password-field .lock-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--gray-500)}
+.login-btn{background:var(--blue-600);color:#fff;border:none;border-radius:var(--radius);padding:15px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{color:var(--mex-red);font-size:13px;text-align:center;padding:8px;background:rgba(206,17,38,.08);border-radius:6px}
+.login-hint{font-size:11px;color:var(--gray-500);text-align:center;margin-top:12px;padding:10px;background:var(--gray-100);border-radius:6px;line-height:1.5}
+.driver-picker{max-width:480px;width:100%;margin:auto;display:flex;flex-direction:column;gap:12px}
+.driver-picker h2{font-size:20px;color:var(--blue-800);text-align:center}
+.driver-picker>p{font-size:13px;color:var(--gray-500);text-align:center;margin-bottom:8px}
+
+/* APP */
+.app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--cream)}
+.app header{background:linear-gradient(135deg,var(--blue-800),var(--blue-600));color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-left svg{width:26px;height:26px}
+.header-title{display:flex;flex-direction:column;line-height:1.2}
+.header-title h1{font-size:14px;font-weight:600}
+.header-title span{font-size:11px;opacity:.85}
+.icon-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s}
+.icon-btn:hover{background:rgba(255,255,255,.25)}
+.app main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#map{flex:1;min-height:150px}
+#panel{background:#fff;border-top:1px solid var(--gray-300);padding:14px;max-height:55vh;overflow-y:auto;flex-shrink:0}
+.panel-title{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--gray-500);font-weight:600;margin:14px 0 8px;display:flex;align-items:center;gap:6px}
+.panel-title:first-child{margin-top:0}
+.panel-title .count{background:var(--blue-600);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:auto;letter-spacing:0}
+.panel-title .refresh-btn{margin-left:auto;background:var(--gray-100);border:none;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--blue-600);font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.card{background:var(--cream);border:1px solid var(--gray-300);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.card-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.card-header svg{color:var(--blue-600)}
+.card h3{font-size:13px;font-weight:600;color:var(--ink)}
+.card p{font-size:12px;color:var(--gray-500);margin-bottom:8px}
+.card .meta{font-size:11px;color:var(--gray-500);display:flex;align-items:center;gap:4px;margin-bottom:8px}
+.btn{border:none;border-radius:8px;padding:11px 14px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:opacity .2s,transform .1s;width:100%}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--blue-600);color:#fff}
+.btn.success{background:var(--mex-green);color:#fff}
+.btn.danger{background:var(--mex-red);color:#fff}
+.btn.ghost{background:var(--gray-100);color:var(--blue-800)}
+.btn+.btn{margin-top:6px}
+.input-row{display:flex;gap:6px;margin-bottom:8px}
+.input-row input,.input-row select{flex:1;padding:11px;border:1.5px solid var(--gray-300);border-radius:8px;font-size:13px;background:#fff}
+.input-row input:focus,.input-row select:focus{outline:none;border-color:var(--blue-600)}
+.input-row .btn{width:auto;padding:11px 14px}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.badge.pendiente{background:rgba(10,108,184,.12);color:var(--blue-600)}
+.badge.asignado{background:rgba(255,152,0,.12);color:#E65100}
+.badge.entregado{background:rgba(0,104,71,.12);color:var(--mex-green)}
+.badge.activo{background:rgba(0,104,71,.12);color:var(--mex-green)}
+.badge.inactivo{background:rgba(107,107,107,.12);color:var(--gray-500)}
+.badge.gps{background:rgba(0,184,217,.15);color:var(--blue-600)}
+.empty{color:var(--gray-500);font-size:12px;font-style:italic;padding:8px 0;text-align:center}
+.error-box{background:rgba(206,17,38,.08);color:var(--mex-red);padding:10px;border-radius:8px;font-size:12px;text-align:center;margin-bottom:8px}
+.loading-box{text-align:center;padding:16px;color:var(--gray-500);font-size:12px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--gray-300);border-top-color:var(--blue-600);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Modal */
+.modal-backdrop{position:fixed;inset:0;z-index:950;background:rgba(6,43,69,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:22px;box-shadow:var(--shadow-lg);max-height:85vh;overflow-y:auto}
+.modal h2{font-size:17px;margin-bottom:16px;color:var(--blue-800);display:flex;align-items:center;gap:8px}
+.modal label{display:block;font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:10px}
+.modal input,.modal select{width:100%;padding:12px;border:1.5px solid var(--gray-300);border-radius:8px;font-size:14px;background:#fff}
+.modal input:focus,.modal select:focus{outline:none;border-color:var(--blue-600)}
+.modal .modal-actions{display:flex;gap:8px;margin-top:18px}
+.modal .modal-actions .btn{flex:1;margin-top:0}
+.modal .coords-box{background:var(--gray-100);padding:10px;border-radius:8px;font-size:12px;color:var(--gray-500);margin-bottom:12px;text-align:center;font-family:monospace}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;max-width:85%;text-align:center;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--mex-green)}
+.toast.error{background:var(--mex-red)}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" class="splash">
+  <div style="position:relative;display:flex;align-items:center;justify-content:center">
+    <div class="splash-ripple"></div>
+    <div class="splash-ripple delay"></div>
+    <svg class="splash-drop" viewBox="0 0 24 24" fill="none">
+      <defs><linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#7FDBEE"/><stop offset="100%" stop-color="#0B5E8A"/>
+      </linearGradient></defs>
+      <path d="M12 2.5C12 2.5 4.5 10 4.5 15a7.5 7.5 0 0015 0c0-5-7.5-12.5-7.5-12.5z" fill="url(#dropGrad)" stroke="rgba(255,255,255,.7)" stroke-width="1"/>
+    </svg>
+  </div>
+  <h1>Agua Rutas</h1>
+  <p>Distribución de agua</p>
+  <div class="splash-loader"><span></span><span></span><span></span></div>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="login hidden">
+  <div id="role-picker">
+    <div class="login-header">
+      <svg viewBox="0 0 24 24" fill="none">
+        <defs><linearGradient id="dropGrad2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#00B8D9"/><stop offset="100%" stop-color="#0B5E8A"/>
+        </linearGradient></defs>
+        <path d="M12 2.5C12 2.5 4.5 10 4.5 15a7.5 7.5 0 0015 0c0-5-7.5-12.5-7.5-12.5z" fill="url(#dropGrad2)"/>
+      </svg>
+      <h1>Agua Rutas</h1>
+      <p>Selecciona tu rol para continuar</p>
+    </div>
+    <div class="roles">
+      <div class="role-card" data-role="admin">
+        <div class="role-icon-wrap admin">
+          <svg class="icon lg" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="role-text"><h2>Administrador</h2><p>Pedidos, choferes y asignaciones</p></div>
+        <svg class="icon chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+      <div class="role-card" data-role="driver">
+        <div class="role-icon-wrap driver">
+          <svg class="icon lg" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+        </div>
+        <div class="role-text"><h2>Chofer</h2><p>Ver asignaciones y navegar</p></div>
+        <svg class="icon chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <form id="login-form" class="login-form hidden">
+    <button type="button" class="back-btn" id="back-to-roles">
+      <svg class="icon sm" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Volver
+    </button>
+    <div class="role-display">
+      <div class="role-icon-wrap admin" id="login-role-icon">
+        <svg class="icon lg" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h2 id="login-role-title">Administrador</h2>
+      <p>Ingresa tu contraseña para continuar</p>
+    </div>
+    <div class="password-field">
+      <input type="password" id="password-input" placeholder="Contraseña" autocomplete="off">
+      <svg class="icon lock-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <button type="submit" class="login-btn" id="login-btn">Ingresar</button>
+    <p class="login-error hidden" id="login-error">Contraseña incorrecta</p>
+    <div class="login-hint">
+      Demo MVP · Admin: <strong>Admin#Agua2024</strong> · Chofer: <strong>Chofer#Agua2024</strong>
+    </div>
+  </form>
+
+  <div id="driver-picker" class="driver-picker hidden">
+    <button type="button" class="back-btn" id="driver-picker-back" style="background:none;border:none;color:var(--blue-600);padding:8px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;align-self:flex-start;margin-bottom:8px">
+      <svg class="icon sm" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Volver
+    </button>
+    <h2>¿Quién eres?</h2>
+    <p>Selecciona tu nombre para entrar</p>
+    <div id="driver-picker-list"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app hidden">
+  <header>
+    <div class="header-left">
+      <svg viewBox="0 0 24 24" fill="none">
+        <defs><linearGradient id="dropGrad3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#7FDBEE"/><stop offset="100%" stop-color="#00B8D9"/>
+        </linearGradient></defs>
+        <path d="M12 2.5C12 2.5 4.5 10 4.5 15a7.5 7.5 0 0015 0c0-5-7.5-12.5-7.5-12.5z" fill="url(#dropGrad3)"/>
+      </svg>
+      <div class="header-title">
+        <h1>Agua Rutas</h1>
+        <span id="app-role-label">Administrador</span>
+      </div>
+    </div>
+    <button class="icon-btn" id="logout-btn" title="Cerrar sesión">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+    </button>
+  </header>
+  <main>
+    <div id="map"></div>
+    <div id="panel"></div>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast" class="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SUPABASE_URL = 'https://aiipxfssbnpfpefbbnwm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpaXB4ZnNzYm5wZnBlZmJibndtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MDM2MzIsImV4cCI6MjA5NDI3OTYzMn0.CS_e43iE4ClLgqQULrm4mNm3ji71WQZQcdBNfg6lTHg';
+
+const PASSWORDS = {
+  admin:  'Admin#Agua2024',
+  driver: 'Chofer#Agua2024',
+};
+
+const SESSION_KEY   = 'aguaRutasSession';
+const UBIC_KEY      = 'aguaRutasUbicaciones';
+const DRIVER_ID_KEY = 'aguaRutasDriverId';
+const DRIVER_NAME_KEY = 'aguaRutasDriverName';
+
+const ICONS = {
+  pin:     '<svg class="icon sm" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+  nav:     '<svg class="icon sm" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
+  check:   '<svg class="icon sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+  send:    '<svg class="icon sm" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+  refresh: '<svg class="icon sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
+  driver:  '<svg class="icon sm" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>',
+  clock:   '<svg class="icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  bag:     '<svg class="icon sm" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  money:   '<svg class="icon sm" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>',
+  phone:   '<svg class="icon sm" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  trash:   '<svg class="icon sm" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  plus:    '<svg class="icon sm" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  gps:     '<svg class="icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" x2="12" y1="2" y2="6"/><line x1="12" x2="12" y1="18" y2="22"/><line x1="2" x2="6" y1="12" y2="12"/><line x1="18" x2="22" y1="12" y2="12"/></svg>',
+};
+
+const App = {
+  state: {
+    role: null,
+    pedidos: [], choferes: [], asignaciones: [], ubicaciones: [],
+    loadingPedidos: false, loadingChoferes: false, loadingAsignaciones: false,
+    errorPedidos: null, errorChoferes: null, errorAsignaciones: null,
+    driverId: localStorage.getItem(DRIVER_ID_KEY),
+    driverName: localStorage.getItem(DRIVER_NAME_KEY),
+    pendingDriverList: [],
+    map: null, markers: {},
+    selectedRole: null, refreshTimer: null, assignUbicacionIdx: null,
+  },
+
+  async init() {
+    this.loadUbicaciones();
+    this.setupLogin();
+    this.setupLogout();
+    this.setupDeepLinks();
+    this.checkLaunchUrl();
+
+    setTimeout(() => {
+      document.getElementById('splash').classList.add('fade');
+      setTimeout(() => {
+        document.getElementById('splash').classList.add('hidden');
+        const session = localStorage.getItem(SESSION_KEY);
+        if (session) { this.state.role = session; this.startApp(); }
+        else { document.getElementById('login').classList.remove('hidden'); }
+      }, 400);
+    }, 2000);
+  },
+
+  setupLogin() {
+    document.querySelectorAll('.role-card[data-role]').forEach(card => {
+      card.addEventListener('click', () => this.showPasswordForm(card.dataset.role));
+    });
+    document.getElementById('back-to-roles').addEventListener('click', () => {
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('role-picker').classList.remove('hidden');
+      document.getElementById('password-input').value = '';
+      document.getElementById('login-error').classList.add('hidden');
+    });
+    document.getElementById('driver-picker-back').addEventListener('click', () => {
+      document.getElementById('driver-picker').classList.add('hidden');
+      document.getElementById('role-picker').classList.remove('hidden');
+    });
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.attemptLogin();
+    });
+  },
+  showPasswordForm(role) {
+    this.state.selectedRole = role;
+    const isAdmin = role === 'admin';
+    document.getElementById('login-role-icon').className = `role-icon-wrap ${isAdmin ? 'admin' : 'driver'}`;
+    document.getElementById('login-role-icon').innerHTML = isAdmin
+      ? '<svg class="icon lg" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+      : ICONS.driver.replace('icon sm', 'icon lg');
+    document.getElementById('login-role-title').textContent = isAdmin ? 'Administrador' : 'Chofer';
+    document.getElementById('role-picker').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+    document.getElementById('password-input').focus();
+  },
+  attemptLogin() {
+    const input = document.getElementById('password-input').value;
+    if (input === PASSWORDS[this.state.selectedRole]) {
+      this.state.role = this.state.selectedRole;
+      localStorage.setItem(SESSION_KEY, this.state.role);
+      if (this.state.role === 'driver' && !this.state.driverId) {
+        document.getElementById('login-form').classList.add('hidden');
+        document.getElementById('password-input').value = '';
+        this.showDriverPicker();
+        return;
+      }
+      document.getElementById('login').classList.add('hidden');
+      this.startApp();
+    } else {
+      document.getElementById('login-error').classList.remove('hidden');
+      document.getElementById('password-input').value = '';
+      document.getElementById('password-input').focus();
+    }
+  },
+  async showDriverPicker() {
+    document.getElementById('driver-picker').classList.remove('hidden');
+    const list = document.getElementById('driver-picker-list');
+    list.innerHTML = '<div class="loading-box"><span class="spinner"></span>Cargando choferes…</div>';
+    try {
+      const data = await this.sbFetch('choferes?select=*&order=nombre.asc');
+      const activos = (Array.isArray(data) ? data : []).filter(c => c.activo !== false);
+      this.state.pendingDriverList = activos;
+      if (activos.length === 0) {
+        list.innerHTML = '<div class="error-box">No hay choferes activos.<br>Pide al administrador que te registre.</div>';
+        return;
+      }
+      list.innerHTML = activos.map(c => `
+        <div class="role-card" onclick="App.selectDriver('${this.escape(String(c.id))}')">
+          <div class="role-icon-wrap driver">${ICONS.driver.replace('icon sm', 'icon lg')}</div>
+          <div class="role-text">
+            <h2>${this.escape(c.nombre || 'Sin nombre')}</h2>
+            <p>${this.escape(c.telefono || 'Sin teléfono')}</p>
+          </div>
+          <svg class="icon chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = `<div class="error-box">Error al cargar: ${this.escape(e.message || e)}</div>`;
+    }
+  },
+  selectDriver(id) {
+    const chofer = this.state.pendingDriverList.find(c => String(c.id) === String(id));
+    if (!chofer) return;
+    this.state.driverId = chofer.id;
+    this.state.driverName = chofer.nombre;
+    localStorage.setItem(DRIVER_ID_KEY, chofer.id);
+    localStorage.setItem(DRIVER_NAME_KEY, chofer.nombre || '');
+    document.getElementById('driver-picker').classList.add('hidden');
+    document.getElementById('login').classList.add('hidden');
+    this.startApp();
+  },
+  setupLogout() {
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      if (!confirm('¿Cerrar sesión?')) return;
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(DRIVER_ID_KEY);
+      localStorage.removeItem(DRIVER_NAME_KEY);
+      this.state.role = null;
+      this.state.driverId = null;
+      this.state.driverName = null;
+      if (this.state.refreshTimer) { clearInterval(this.state.refreshTimer); this.state.refreshTimer = null; }
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('login').classList.remove('hidden');
+      document.getElementById('role-picker').classList.remove('hidden');
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('driver-picker').classList.add('hidden');
+      document.getElementById('password-input').value = '';
+    });
+  },
+
+  startApp() {
+    document.getElementById('app').classList.remove('hidden');
+    const label = this.state.role === 'admin'
+      ? 'Administrador'
+      : `Chofer · ${this.state.driverName || ''}`.trim();
+    document.getElementById('app-role-label').textContent = label;
+    if (!this.state.map) this.initMap();
+    this.render();
+    this.refreshMarkers();
+    setTimeout(() => this.state.map.invalidateSize(), 100);
+
+    if (this.state.role === 'admin') {
+      this.loadPedidosFromSupabase();
+      this.loadChoferesFromSupabase();
+      this.loadAsignacionesFromSupabase();
+      this.state.refreshTimer = setInterval(() => {
+        this.loadPedidosFromSupabase(true);
+        this.loadChoferesFromSupabase(true);
+        this.loadAsignacionesFromSupabase(true);
+      }, 30000);
+    } else {
+      this.loadAsignacionesFromSupabase();
+      this.state.refreshTimer = setInterval(() => {
+        this.loadAsignacionesFromSupabase(true);
+      }, 30000);
+    }
+  },
+
+  initMap() {
+    this.state.map = L.map('map').setView([19.4326, -99.1332], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19,
+    }).addTo(this.state.map);
+  },
+  refreshMarkers() {
+    if (!this.state.map) return;
+    const m = this.state.map;
+    Object.values(this.state.markers).forEach(mk => m.removeLayer(mk));
+    this.state.markers = {};
+    this.state.ubicaciones.forEach((u, i) => {
+      this.state.markers['u' + i] = L.marker([u.lat, u.lng]).addTo(m)
+        .bindPopup(`Ubicación WhatsApp<br>${new Date(u.timestamp).toLocaleString()}`);
+    });
+  },
+
+  async sbFetch(path, opts = {}) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: opts.method || 'GET',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Accept': 'application/json',
+        ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(opts.prefer ? { 'Prefer': opts.prefer } : {}),
+      },
+      ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    if (opts.parseJson === false) return null;
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  },
+
+  async loadPedidosFromSupabase(silent = false) {
+    this.state.loadingPedidos = true;
+    this.state.errorPedidos = null;
+    if (!silent) this.render();
+    try {
+      const data = await this.sbFetch('pedidos?select=*&order=created_at.desc&limit=100');
+      this.state.pedidos = Array.isArray(data) ? data : [];
+    } catch (e) {
+      this.state.errorPedidos = e.message || String(e);
+    } finally {
+      this.state.loadingPedidos = false;
+      if (this.state.role === 'admin') this.render();
+    }
+  },
+
+  isGpsAssignment(p) {
+    if (Array.isArray(p.items) && p.items.some(i => i && i.tipo === 'gps')) return true;
+    return false;
+  },
+  parseCoords(p) {
+    if (p.ubicacion_chofer) {
+      const m = String(p.ubicacion_chofer).match(/^(-?[\d.]+)\s*,\s*(-?[\d.]+)$/);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    }
+    if (Array.isArray(p.items)) {
+      const g = p.items.find(i => i && i.tipo === 'gps');
+      if (g && g.lat != null && g.lng != null) return { lat: Number(g.lat), lng: Number(g.lng) };
+    }
+    return null;
+  },
+  async loadAsignacionesFromSupabase(silent = false) {
+    this.state.loadingAsignaciones = true;
+    this.state.errorAsignaciones = null;
+    if (!silent) this.render();
+    try {
+      let data;
+      if (this.state.role === 'admin') {
+        data = await this.sbFetch('pedidos?select=*&order=created_at.desc&limit=200');
+      } else if (this.state.driverId) {
+        data = await this.sbFetch(`pedidos?select=*&chofer_id=eq.${encodeURIComponent(this.state.driverId)}&order=created_at.desc&limit=100`);
+      } else {
+        data = [];
+      }
+      const todas = Array.isArray(data) ? data : [];
+      this.state.asignaciones = todas.filter(p => this.isGpsAssignment(p));
+    } catch (e) {
+      this.state.errorAsignaciones = e.message || String(e);
+    } finally {
+      this.state.loadingAsignaciones = false;
+      this.render();
+    }
+  },
+  async completarAsignacion(pedidoId) {
+    if (!confirm('¿Marcar esta asignación como completada?')) return;
+    try {
+      await this.sbFetch(`pedidos?id=eq.${encodeURIComponent(pedidoId)}`, {
+        method: 'PATCH',
+        body: { estado: 'entregado' },
+        prefer: 'return=minimal',
+        parseJson: false,
+      });
+      const idx = this.state.asignaciones.findIndex(a => String(a.id) === String(pedidoId));
+      if (idx !== -1) this.state.asignaciones[idx].estado = 'entregado';
+      this.render();
+      this.showToast('Asignación completada', 'success');
+    } catch (e) {
+      this.showToast('Error al completar: ' + (e.message || e), 'error');
+    }
+  },
+
+  openAssignModal(ubicacionIdx) {
+    const u = this.state.ubicaciones[ubicacionIdx];
+    if (!u) return;
+    const activos = this.state.choferes.filter(c => c.activo !== false);
+    if (activos.length === 0) {
+      this.showToast('Primero agrega al menos un chofer', 'error');
+      return;
+    }
+    this.state.assignUbicacionIdx = ubicacionIdx;
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-backdrop" id="assign-backdrop">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h2>${ICONS.gps} Asignar a chofer</h2>
+          <div class="coords-box">${u.lat.toFixed(6)}, ${u.lng.toFixed(6)}</div>
+          <label for="assign-driver">Chofer</label>
+          <select id="assign-driver">
+            ${activos.map(c => `<option value="${this.escape(String(c.id))}">${this.escape(c.nombre)} — ${this.escape(c.telefono || '')}</option>`).join('')}
+          </select>
+          <div class="modal-actions">
+            <button class="btn ghost" onclick="App.closeAssignModal()">Cancelar</button>
+            <button class="btn primary" id="assign-save" onclick="App.confirmAssign()">Asignar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('assign-backdrop').addEventListener('click', () => this.closeAssignModal());
+  },
+  closeAssignModal() {
+    document.getElementById('modal-root').innerHTML = '';
+    this.state.assignUbicacionIdx = null;
+  },
+  async confirmAssign() {
+    const idx = this.state.assignUbicacionIdx;
+    const u = this.state.ubicaciones[idx];
+    if (!u) return this.closeAssignModal();
+    const sel = document.getElementById('assign-driver');
+    const driverId = sel.value;
+    const driverName = sel.options[sel.selectedIndex].textContent;
+    if (!driverId) return this.showToast('Selecciona un chofer', 'error');
+
+    const btn = document.getElementById('assign-save');
+    btn.disabled = true;
+    btn.textContent = 'Asignando…';
+
+    try {
+      const payload = {
+        id: 'gps-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        chofer_id: driverId,
+        ubicacion_chofer: `${u.lat},${u.lng}`,
+        direccion: `Ubicación GPS ${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}`,
+        items: [{ tipo: 'gps', lat: u.lat, lng: u.lng }],
+        monto_total: 0,
+      };
+      await this.sbFetch('pedidos', {
+        method: 'POST',
+        body: payload,
+        prefer: 'return=representation',
+      });
+      this.state.ubicaciones.splice(idx, 1);
+      this.saveUbicaciones();
+      this.refreshMarkers();
+      this.closeAssignModal();
+      await this.loadAsignacionesFromSupabase();
+      this.render();
+      this.showToast('Asignado a ' + driverName, 'success');
+    } catch (e) {
+      this.showToast('Error al asignar: ' + (e.message || e), 'error');
+      btn.disabled = false;
+      btn.textContent = 'Asignar';
+    }
+  },
+
+  async loadChoferesFromSupabase(silent = false) {
+    this.state.loadingChoferes = true;
+    this.state.errorChoferes = null;
+    if (!silent) this.render();
+    try {
+      const data = await this.sbFetch('choferes?select=*&order=created_at.desc');
+      this.state.choferes = Array.isArray(data) ? data : [];
+    } catch (e) {
+      this.state.errorChoferes = e.message || String(e);
+    } finally {
+      this.state.loadingChoferes = false;
+      if (this.state.role === 'admin') this.render();
+    }
+  },
+  async createChofer(nombre, telefono) {
+    const data = await this.sbFetch('choferes', {
+      method: 'POST',
+      body: { nombre, telefono, activo: true },
+      prefer: 'return=representation',
+    });
+    return Array.isArray(data) ? data[0] : data;
+  },
+  async deleteChofer(id) {
+    await this.sbFetch(`choferes?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      prefer: 'return=minimal',
+      parseJson: false,
+    });
+  },
+
+  loadUbicaciones() {
+    try {
+      const raw = localStorage.getItem(UBIC_KEY);
+      this.state.ubicaciones = raw ? JSON.parse(raw) : [];
+    } catch { this.state.ubicaciones = []; }
+  },
+  saveUbicaciones() {
+    localStorage.setItem(UBIC_KEY, JSON.stringify(this.state.ubicaciones.slice(-50)));
+  },
+  addUbicacion(lat, lng) {
+    const u = { lat, lng, timestamp: Date.now() };
+    this.state.ubicaciones.push(u);
+    this.saveUbicaciones();
+    this.refreshMarkers();
+    this.state.map.setView([lat, lng], 15);
+    this.showToast('Ubicación recibida de WhatsApp', 'success');
+    if (this.state.role) this.render();
+  },
+
+  async checkLaunchUrl() {
+    try {
+      if (window.Capacitor?.Plugins?.App) {
+        const r = await window.Capacitor.Plugins.App.getLaunchUrl();
+        if (r?.url) this.handleDeepLink(r.url);
+      }
+    } catch (e) { console.warn(e); }
+  },
+  setupDeepLinks() {
+    try {
+      if (window.Capacitor?.Plugins?.App) {
+        window.Capacitor.Plugins.App.addListener('appUrlOpen', (d) => {
+          if (d?.url) this.handleDeepLink(d.url);
+        });
+      }
+    } catch (e) { console.warn(e); }
+  },
+  handleDeepLink(url) {
+    let lat = null, lng = null;
+    const m1 = url.match(/geo:([-\d.]+),([-\d.]+)/);
+    if (m1) { lat = parseFloat(m1[1]); lng = parseFloat(m1[2]); }
+    if ((lat === 0 && lng === 0) || lat === null) {
+      const q = url.match(/[?&]q=([-\d.]+),([-\d.]+)/);
+      if (q) { lat = parseFloat(q[1]); lng = parseFloat(q[2]); }
+    }
+    if (isNaN(lat) || isNaN(lng)) return;
+    this.addUbicacion(lat, lng);
+  },
+
+  openWhatsApp(text) {
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    try { window.open(url, '_system'); } catch { window.open(url, '_blank'); }
+  },
+  sendPedido(pedidoId) {
+    const p = this.state.pedidos.find(x => String(x.id) === String(pedidoId));
+    if (!p) return;
+    const direccion = p.direccion || 'Sin dirección registrada';
+    const monto = p.monto_total != null ? `$${Number(p.monto_total).toFixed(2)}` : '—';
+    const mapsSearch = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+    const texto =
+`🚚 Nuevo pedido Agua Rutas
+
+Pedido: #${String(p.id).slice(-6)}
+Monto: ${monto}
+Dirección: ${direccion}
+
+Abrir en Google Maps:
+${mapsSearch}`;
+    this.openWhatsApp(texto);
+  },
+  navigateTo(lat, lng) {
+    const intentUrl = `google.navigation:q=${lat},${lng}`;
+    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    if (window.Capacitor?.Plugins?.App) {
+      try { window.open(intentUrl, '_system'); }
+      catch { window.open(webUrl, '_system'); }
+    } else { window.open(webUrl, '_blank'); }
+  },
+
+  openNuevoChoferModal() {
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-backdrop" id="nuevo-chofer-backdrop">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h2>${ICONS.driver} Nuevo chofer</h2>
+          <label for="nc-nombre">Nombre completo</label>
+          <input id="nc-nombre" placeholder="Ej. Juan Pérez" maxlength="80" autocomplete="off">
+          <label for="nc-telefono">Teléfono</label>
+          <input id="nc-telefono" placeholder="Ej. 5551234567" inputmode="tel" maxlength="30" autocomplete="off">
+          <div class="modal-actions">
+            <button class="btn ghost" onclick="App.closeNuevoChoferModal()">Cancelar</button>
+            <button class="btn primary" id="nc-save" onclick="App.submitNuevoChofer()">Guardar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('nuevo-chofer-backdrop').addEventListener('click', () => this.closeNuevoChoferModal());
+    setTimeout(() => document.getElementById('nc-nombre').focus(), 100);
+  },
+  closeNuevoChoferModal() {
+    document.getElementById('modal-root').innerHTML = '';
+  },
+  async submitNuevoChofer() {
+    const nombre = (document.getElementById('nc-nombre').value || '').trim();
+    const telefono = (document.getElementById('nc-telefono').value || '').trim();
+    if (!nombre) return this.showToast('El nombre es obligatorio', 'error');
+    if (!telefono) return this.showToast('El teléfono es obligatorio', 'error');
+    const btn = document.getElementById('nc-save');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      const nuevo = await this.createChofer(nombre, telefono);
+      this.state.choferes.unshift(nuevo);
+      this.closeNuevoChoferModal();
+      this.render();
+      this.showToast('Chofer agregado', 'success');
+    } catch (e) {
+      this.showToast('Error al guardar: ' + (e.message || e), 'error');
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+    }
+  },
+  async confirmDeleteChofer(id) {
+    const chofer = this.state.choferes.find(c => String(c.id) === String(id));
+    if (!chofer) return;
+    if (!confirm(`¿Eliminar al chofer "${chofer.nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await this.deleteChofer(id);
+      this.state.choferes = this.state.choferes.filter(c => String(c.id) !== String(id));
+      this.render();
+      this.showToast('Chofer eliminado', 'success');
+    } catch (e) {
+      this.showToast('Error al eliminar: ' + (e.message || e), 'error');
+    }
+  },
+
+  render() {
+    const panel = document.getElementById('panel');
+    panel.innerHTML = this.state.role === 'admin' ? this.renderAdmin() : this.renderDriver();
+  },
+
+  renderPedidosList() {
+    if (this.state.errorPedidos) {
+      return `<div class="error-box">No se pudieron cargar los pedidos.<br><small>${this.escape(this.state.errorPedidos)}</small></div>`;
+    }
+    if (this.state.loadingPedidos && this.state.pedidos.length === 0) {
+      return `<div class="loading-box"><span class="spinner"></span>Cargando pedidos…</div>`;
+    }
+    const activos = this.state.pedidos.filter(p => {
+      if (this.isGpsAssignment(p)) return false;
+      const est = String(p.estado || '').toLowerCase();
+      return est !== 'entregado' && est !== 'completado' && est !== 'cancelado';
+    });
+    if (activos.length === 0) return `<p class="empty">Sin pedidos pendientes</p>`;
+    return activos.slice(0, 20).map(p => {
+      const est = String(p.estado || 'pendiente').toLowerCase();
+      const dir = p.direccion || 'Sin dirección';
+      const monto = p.monto_total != null ? `$${Number(p.monto_total).toFixed(2)}` : '';
+      const fecha = p.created_at ? new Date(p.created_at).toLocaleString() : '';
+      return `
+        <div class="card">
+          <div class="card-header">
+            ${ICONS.bag}
+            <h3>Pedido #${this.escape(String(p.id).slice(-6))}</h3>
+            <span class="badge ${est}" style="margin-left:auto">${this.escape(est)}</span>
+          </div>
+          <div class="meta">${ICONS.pin} ${this.escape(dir)}</div>
+          ${monto ? `<div class="meta">${ICONS.money} ${monto}</div>` : ''}
+          ${fecha ? `<div class="meta">${ICONS.clock} ${this.escape(fecha)}</div>` : ''}
+          <button class="btn primary" onclick="App.sendPedido('${this.escape(String(p.id))}')">
+            ${ICONS.send} Enviar por WhatsApp
+          </button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderChoferesList() {
+    if (this.state.errorChoferes) {
+      return `<div class="error-box">No se pudieron cargar los choferes.<br><small>${this.escape(this.state.errorChoferes)}</small></div>`;
+    }
+    if (this.state.loadingChoferes && this.state.choferes.length === 0) {
+      return `<div class="loading-box"><span class="spinner"></span>Cargando choferes…</div>`;
+    }
+    if (this.state.choferes.length === 0) {
+      return `<p class="empty">Sin choferes registrados. Toca "+ Agregar" para crear el primero.</p>`;
+    }
+    return this.state.choferes.map(c => {
+      const activo = c.activo !== false;
+      return `
+        <div class="card">
+          <div class="card-header">
+            ${ICONS.driver}
+            <h3>${this.escape(c.nombre || 'Sin nombre')}</h3>
+            <span class="badge ${activo ? 'activo' : 'inactivo'}" style="margin-left:auto">${activo ? 'activo' : 'inactivo'}</span>
+          </div>
+          <div class="meta">${ICONS.phone} ${this.escape(c.telefono || '—')}</div>
+          <button class="btn danger" onclick="App.confirmDeleteChofer('${this.escape(String(c.id))}')">
+            ${ICONS.trash} Eliminar
+          </button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderUbicacionesList() {
+    if (this.state.ubicaciones.length === 0) {
+      return `<p class="empty">Aún no has recibido ubicaciones por WhatsApp</p>`;
+    }
+    return this.state.ubicaciones.slice().reverse().map((u, revIdx) => {
+      const realIdx = this.state.ubicaciones.length - 1 - revIdx;
+      return `
+        <div class="card">
+          <div class="card-header">
+            ${ICONS.pin}
+            <h3>${u.lat.toFixed(5)}, ${u.lng.toFixed(5)}</h3>
+          </div>
+          <div class="meta">${ICONS.clock} ${new Date(u.timestamp).toLocaleString()}</div>
+          <button class="btn success" onclick="App.openAssignModal(${realIdx})">
+            ${ICONS.send} Asignar a chofer
+          </button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderAsignacionesList(forAdmin = true) {
+    if (this.state.errorAsignaciones) {
+      return `<div class="error-box">No se pudieron cargar asignaciones.<br><small>${this.escape(this.state.errorAsignaciones)}</small></div>`;
+    }
+    if (this.state.loadingAsignaciones && this.state.asignaciones.length === 0) {
+      return `<div class="loading-box"><span class="spinner"></span>Cargando…</div>`;
+    }
+    const activas = this.state.asignaciones.filter(a => {
+      const est = String(a.estado || '').toLowerCase();
+      return est !== 'entregado' && est !== 'completado' && est !== 'cancelado';
+    });
+    if (activas.length === 0) return `<p class="empty">Sin asignaciones pendientes</p>`;
+    return activas.map(a => {
+      const coords = this.parseCoords(a);
+      if (!coords) return '';
+      const chofer = this.state.choferes.find(c => String(c.id) === String(a.chofer_id));
+      const nombreChofer = chofer ? chofer.nombre : (a.chofer_id ? 'Chofer' : 'Sin asignar');
+      const fecha = a.created_at ? new Date(a.created_at).toLocaleString() : '';
+      return `
+        <div class="card">
+          <div class="card-header">
+            ${ICONS.gps}
+            <h3>${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</h3>
+            <span class="badge gps" style="margin-left:auto">GPS</span>
+          </div>
+          ${fecha ? `<div class="meta">${ICONS.clock} ${this.escape(fecha)}</div>` : ''}
+          ${forAdmin ? `<div class="meta">${ICONS.driver} ${this.escape(nombreChofer)}</div>` : ''}
+          <button class="btn success" onclick="App.navigateTo(${coords.lat}, ${coords.lng})">
+            ${ICONS.nav} Navegar en Google Maps
+          </button>
+          ${!forAdmin ? `<button class="btn primary" onclick="App.completarAsignacion('${this.escape(String(a.id))}')">
+            ${ICONS.check} Marcar completada
+          </button>` : ''}
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderAdmin() {
+    const activos = this.state.pedidos.filter(p => {
+      if (this.isGpsAssignment(p)) return false;
+      const est = String(p.estado || '').toLowerCase();
+      return est !== 'entregado' && est !== 'completado' && est !== 'cancelado';
+    });
+    return `
+      <div class="panel-title">
+        ${ICONS.bag} Pedidos pendientes
+        <span class="count">${activos.length}</span>
+        <button class="refresh-btn" onclick="App.loadPedidosFromSupabase()">
+          ${ICONS.refresh} Actualizar
+        </button>
+      </div>
+      ${this.renderPedidosList()}
+
+      <div class="panel-title">
+        ${ICONS.driver} Choferes
+        <span class="count">${this.state.choferes.length}</span>
+        <button class="refresh-btn" onclick="App.loadChoferesFromSupabase()">
+          ${ICONS.refresh} Actualizar
+        </button>
+      </div>
+      <button class="btn primary" onclick="App.openNuevoChoferModal()">
+        ${ICONS.plus} Agregar chofer
+      </button>
+      <div style="height:8px"></div>
+      ${this.renderChoferesList()}
+
+      <div class="panel-title">
+        ${ICONS.pin} Ubicaciones de WhatsApp
+        <span class="count">${this.state.ubicaciones.length}</span>
+      </div>
+      ${this.renderUbicacionesList()}
+
+      <div class="panel-title">
+        ${ICONS.gps} Asignaciones a choferes
+        <span class="count">${this.state.asignaciones.length}</span>
+        <button class="refresh-btn" onclick="App.loadAsignacionesFromSupabase()">
+          ${ICONS.refresh} Actualizar
+        </button>
+      </div>
+      ${this.renderAsignacionesList(true)}
+    `;
+  },
+
+  renderDriver() {
+    return `
+      <div class="panel-title">
+        ${ICONS.gps} Mis asignaciones
+        <span class="count">${this.state.asignaciones.length}</span>
+        <button class="refresh-btn" onclick="App.loadAsignacionesFromSupabase()">
+          ${ICONS.refresh} Actualizar
+        </button>
+      </div>
+      <p class="empty" style="text-align:left;padding:0 0 8px">
+        Asignaciones que te ha enviado el administrador.
+      </p>
+      ${this.renderAsignacionesList(false)}
+
+      <div class="panel-title" style="margin-top:16px">
+        ${ICONS.pin} Ubicaciones de WhatsApp (local)
+        <span class="count">${this.state.ubicaciones.length}</span>
+      </div>
+      ${this.renderUbicacionesList()}
+    `;
+  },
+
+  escape(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  },
+  showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + type;
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => el.classList.remove('show'), 3000);
+  },
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>
