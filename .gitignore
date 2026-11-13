@@ -1,0 +1,8 @@
+node_modules/
+android/
+.gradle/
+*.log
+.DS_Store
+.idea/
+.vscode/
+local.properties
