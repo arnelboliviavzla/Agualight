@@ -285,7 +285,7 @@ const App = {
     pendingDriverList: [],
     map: null, markers: {},
     selectedRole: null, refreshTimer: null, assignUbicacionIdx: null,
-    tracking: null, // { watcherId, pedidoId, lat, lng }
+    tracking: null,
   },
 
   async init() {
@@ -306,7 +306,6 @@ const App = {
     }, 2000);
   },
 
-  // ===== LOGIN =====
   setupLogin() {
     document.querySelectorAll('.role-card[data-role]').forEach(card => {
       card.addEventListener('click', () => this.showPasswordForm(card.dataset.role));
@@ -414,7 +413,6 @@ const App = {
     });
   },
 
-  // ===== APP =====
   startApp() {
     document.getElementById('app').classList.remove('hidden');
     const label = this.state.role === 'admin'
@@ -460,7 +458,6 @@ const App = {
     });
   },
 
-  // ===== SUPABASE REST =====
   async sbFetch(path, opts = {}) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
       method: opts.method || 'GET',
@@ -482,7 +479,6 @@ const App = {
     return text ? JSON.parse(text) : null;
   },
 
-  // ===== PEDIDOS =====
   async loadPedidosFromSupabase(silent = false) {
     this.state.loadingPedidos = true;
     this.state.errorPedidos = null;
@@ -554,10 +550,24 @@ const App = {
     }
   },
 
-  // ===== TRACKING EN SEGUNDO PLANO (background-geolocation) =====
   getBGPlugin() {
-    // El plugin community se expone como Capacitor.Plugins.BackgroundGeolocation
     return window.Capacitor?.Plugins?.BackgroundGeolocation || null;
+  },
+  getLocalNotifPlugin() {
+    return window.Capacitor?.Plugins?.LocalNotifications || null;
+  },
+  async requestNotificationPermission() {
+    const ln = this.getLocalNotifPlugin();
+    if (!ln) return false;
+    try {
+      const status = await ln.checkPermissions();
+      if (status.display === 'granted') return true;
+      const req = await ln.requestPermissions();
+      return req.display === 'granted';
+    } catch (e) {
+      console.warn('Error pidiendo permiso de notificaciones:', e);
+      return false;
+    }
   },
   async startTracking(pedidoId, lat, lng) {
     const bg = this.getBGPlugin();
@@ -565,13 +575,17 @@ const App = {
       this.showToast('Tracking no disponible (solo en APK)', 'error');
       return;
     }
-    // Si ya estamos rastreando este pedido, no hacer nada
     if (this.state.tracking && this.state.tracking.pedidoId === pedidoId) {
       this.showToast('Ya estás en camino a este destino', 'success');
       return;
     }
-    // Detener cualquier tracking anterior
     await this.stopTracking();
+
+    // Solicitar permiso de notificaciones en Android 13+
+    const hasNotif = await this.requestNotificationPermission();
+    if (!hasNotif) {
+      this.showToast('Sin permiso de notificaciones, el rastreo puede fallar', 'error');
+    }
 
     try {
       const watcherId = await bg.addWatcher(
@@ -625,7 +639,6 @@ const App = {
       const pedidoId = t.pedidoId;
       await this.stopTracking();
       this.showToast(`¡Llegaste al destino (${Math.round(dist)} m)!`, 'success');
-      // Actualizar automáticamente a "entregado"
       try {
         await this.sbFetch(`pedidos?id=eq.${encodeURIComponent(pedidoId)}`, {
           method: 'PATCH',
@@ -642,7 +655,6 @@ const App = {
     }
   },
 
-  // ===== ASIGNAR UBICACIÓN A CHOFER =====
   openAssignModal(ubicacionIdx) {
     const u = this.state.ubicaciones[ubicacionIdx];
     if (!u) return;
@@ -715,7 +727,6 @@ const App = {
     }
   },
 
-  // ===== CHOFERES =====
   async loadChoferesFromSupabase(silent = false) {
     this.state.loadingChoferes = true;
     this.state.errorChoferes = null;
@@ -746,7 +757,6 @@ const App = {
     });
   },
 
-  // ===== UBICACIONES WHATSAPP =====
   loadUbicaciones() {
     try {
       const raw = localStorage.getItem(UBIC_KEY);
@@ -766,7 +776,6 @@ const App = {
     if (this.state.role) this.render();
   },
 
-  // ===== DEEP LINKS =====
   async checkLaunchUrl() {
     try {
       if (window.Capacitor?.Plugins?.App) {
@@ -796,7 +805,6 @@ const App = {
     this.addUbicacion(lat, lng);
   },
 
-  // ===== WHATSAPP / NAV =====
   openWhatsApp(text) {
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     try { window.open(url, '_system'); } catch { window.open(url, '_blank'); }
@@ -819,11 +827,9 @@ ${mapsSearch}`;
     this.openWhatsApp(texto);
   },
   navigateTo(pedidoId, lat, lng) {
-    // 1. Iniciar tracking en background (solo si es un pedido real con id)
     if (pedidoId && !String(pedidoId).startsWith('u')) {
       this.startTracking(String(pedidoId), lat, lng);
     }
-    // 2. Abrir Google Maps
     const intentUrl = `google.navigation:q=${lat},${lng}`;
     const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     if (window.Capacitor?.Plugins?.App) {
@@ -834,7 +840,6 @@ ${mapsSearch}`;
     }
   },
 
-  // ===== MODALES =====
   openNuevoChoferModal() {
     document.getElementById('modal-root').innerHTML = `
       <div class="modal-backdrop" id="nuevo-chofer-backdrop">
@@ -891,7 +896,6 @@ ${mapsSearch}`;
     }
   },
 
-  // ===== RENDER =====
   render() {
     const panel = document.getElementById('panel');
     panel.innerHTML = this.state.role === 'admin' ? this.renderAdmin() : this.renderDriver();
