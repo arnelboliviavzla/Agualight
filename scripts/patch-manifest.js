@@ -1,4 +1,4 @@
-// Parchea AndroidManifest.xml para que la app reciba ubicaciones de WhatsApp (geo:)
+// Parchea AndroidManifest.xml para: ubicaciones WhatsApp (geo:), GPS y background location
 const fs = require('fs');
 const path = require('path');
 
@@ -14,15 +14,14 @@ if (!fs.existsSync(manifestPath)) {
 let manifest = fs.readFileSync(manifestPath, 'utf8');
 let changed = false;
 
-// --- 1. Asegurar launchMode="singleTask" en MainActivity ---
+// --- 1. launchMode="singleTask" en MainActivity ---
 const nameIdx = manifest.indexOf('android:name=".MainActivity"');
 if (nameIdx === -1) {
   console.error('❌ No se encontró MainActivity en AndroidManifest.xml');
   process.exit(1);
 }
-const tagStart = manifest.lastIndexOf('<activity', nameIdx);
 const tagEnd = manifest.indexOf('>', nameIdx);
-const tagContent = manifest.substring(tagStart, tagEnd);
+const tagContent = manifest.substring(manifest.lastIndexOf('<activity', nameIdx), tagEnd);
 
 if (!tagContent.includes('launchMode')) {
   manifest =
@@ -33,7 +32,7 @@ if (!tagContent.includes('launchMode')) {
   console.log('✅ launchMode="singleTask" agregado');
 }
 
-// --- 2. Agregar intent-filter geo (recibir ubicaciones WhatsApp) ---
+// --- 2. Intent-filter geo (WhatsApp) ---
 if (!manifest.includes('android:scheme="geo"')) {
   const geoFilter = `
             <intent-filter>
@@ -53,10 +52,14 @@ if (!manifest.includes('android:scheme="geo"')) {
   console.log('✅ Intent-filter geo agregado');
 }
 
-// --- 3. Permisos de ubicación ---
+// --- 3. Permisos (ubicación normal + background + foreground service) ---
 const perms = [
   'android.permission.ACCESS_FINE_LOCATION',
   'android.permission.ACCESS_COARSE_LOCATION',
+  'android.permission.ACCESS_BACKGROUND_LOCATION',
+  'android.permission.FOREGROUND_SERVICE',
+  'android.permission.FOREGROUND_SERVICE_LOCATION',
+  'android.permission.POST_NOTIFICATIONS',
 ];
 for (const perm of perms) {
   if (!manifest.includes(perm)) {
@@ -68,6 +71,14 @@ for (const perm of perms) {
       );
       changed = true;
       console.log(`✅ Permiso ${perm} agregado`);
+    } else {
+      // Si no hay INTERNET aún, insertar después de <manifest ...>
+      const manifestOpen = manifest.indexOf('>', manifest.indexOf('<manifest'));
+      manifest = manifest.substring(0, manifestOpen + 1) +
+        `\n    <uses-permission android:name="${perm}" />` +
+        manifest.substring(manifestOpen + 1);
+      changed = true;
+      console.log(`✅ Permiso ${perm} agregado (junto a <manifest>)`);
     }
   }
 }
